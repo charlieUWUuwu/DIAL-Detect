@@ -1,17 +1,9 @@
 # 打包
 # DialReader.py
 
-import cv2
-# import os
+import cv2, math
 import numpy as np
-# import matplotlib.pyplot as plt
-# from google.colab.patches import cv2_imshow
-
-# from IPython.core.inputtransformer2 import ESC_SHELL
 from scipy.linalg import sqrtm
-# import time
-
-import math
 
 class DIAL(object):
   def __init__(self,img_full):
@@ -51,24 +43,21 @@ class DIAL(object):
     transfer_matrix = np.array(transfer_matrix)
     return transfer_matrix
 
-  def get_transfer_matrics(self, ellipses):
+  def get_transfer_matrics(self, ellipses): # get the coefficients of the ellipse equation centered at the origin x'Ax = 1, transfer_matrics==[A1, A2, A3, A4] 一個橢圓一個A
     transfer_matrics = []
     for ellipse in ellipses:
       e_x, e_y = ellipse[0]
       a, b = ellipse[1]
-      e_a, e_b = a*0.5, b*0.5  ##e_a-短轴半径 e_b-长轴半径  e_b > e_a
+      e_a, e_b = a*0.5, b*0.5  ##e_a-短軸半徑 e_b-長軸半徑  e_b > e_a
       angle = ellipse[2]
       transfer_matrics.append(self._convert_params(e_a, e_b, angle))
     return transfer_matrics
-
-
-
 
   def _pixelInImage(self, pt, W, H):
     # boolIn = pt[0]>=0 and pt[0]< W and pt[1]>=0 and pt[1] < H
     return pt[0]>=0 and pt[0]< W and pt[1]>=0 and pt[1] < H
  
-  ## 像素插值函数
+  ## 像素插值函數
   def _interpolation(self, image, pt, type=0): 
     H = image.shape[0]
     W = image.shape[1]
@@ -81,7 +70,7 @@ class DIAL(object):
       else:
         pixelVal = 0
 
-    # 双线性插值 Bilinear interpolation
+    # 雙線性插值 Bilinear interpolation
     if type==1:     
       ptTL = np.floor(pt).astype(np.int64)
       ptBR = np.ceil(pt).astype(np.int64)
@@ -99,7 +88,7 @@ class DIAL(object):
         pixelVal = 0
     return pixelVal
 
-
+  # ref : https://zhuanlan.zhihu.com/p/546951395
   def _ellipse2circle(self, image, A, center, R):
     """
     args:
@@ -125,7 +114,7 @@ class DIAL(object):
           pts.append(pt)
     pts = np.array(pts)  
 
-    # 估算椭圆图像的大小
+    # 估算橢圓圖像的大小
     xmin = np.min(pts[:, 0])
     ymin = np.min(pts[:, 1])
     xmax = np.max(pts[:, 0])
@@ -133,17 +122,17 @@ class DIAL(object):
 
     w = xmax - xmin + 1
     h = ymax - ymin + 1 
-    # 为椭圆图像的像素赋值
+    # 為橢圓圖像的像素賦值
     imageEllipse = np.zeros((h, w, image.shape[2])).astype(np.uint8)
     for i in np.arange(len(pts)): #len(pts)
       imageEllipse[pts[i,1]-ymin, pts[i,0]-xmin, :] = image[pts[i,1], pts[i,0], :]
     
-    # 生成圆形图像
+    # 生成圓形圖像
     normSize = 2 * R
     imageCircle = np.zeros((normSize, normSize, image.shape[2])).astype(np.uint8)
     for x in np.arange(normSize):
       for y in np.arange(normSize):
-        # 计算出变换后的点在原始图像上的位置
+        # 計算出變換後的點在原始圖像上的位置
         ptRet = Transform.T @ ((np.array([x, y]) - np.array([normSize/2, normSize/2])))
         val = (ptRet.T) @ A @ ptRet
         if val <= 1:
@@ -152,12 +141,8 @@ class DIAL(object):
       
     return imageEllipse, imageCircle
 
-
-
-
   def get_circles(self, imgs, ellipses, transfer_matrics):
     outs = [] # 蒐集轉換出來的圓形
-    # transfer_matrics = get_transfer_matrics()
     for i in range(4):
       A = transfer_matrics[i]
       A = np.array(A)
@@ -212,7 +197,6 @@ class DIAL(object):
     # beta:  亮度缩放後加上的参数，默認是 0.4， 範圍[0, 2]，值越大，亮度越低
     result = cv2.illuminationChange(img, mask, alpha=0.2, beta=0.4) 
     # show_img(result)
-        
     return result
 
   def aug(self, src):
@@ -255,7 +239,7 @@ class DIAL(object):
     clockwise_angle = math.degrees(math.atan2(vec_y, vec_x)) #[-180, 180]
     # print('初始數值:', clockwise_angle)
 
-    # 由于需要输出顺时针方向的角度，因此需要进行一些调整
+    # 順時針旋轉為正，且以錶盤數值起始點作為0度
     if clockwise_angle < 0: # 表示在上半圓，將九點鐘方向轉為180度、三點鐘轉為360度
       clockwise_angle += 360
     clockwise_angle -= 90+45 # 從六點鐘多一些作為角度起始點
@@ -288,7 +272,7 @@ class DIAL(object):
     # print('edges')
     # cv2_imshow(edges)
 
-    # lines = cv2.HoughLines(edges, 1, np.pi / 180, 45)  # 这里对最后一个参数使用了经验型的值
+    # lines = cv2.HoughLines(edges, 1, np.pi / 180, 45)  
     lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 42)
 
     # 排序
@@ -296,7 +280,7 @@ class DIAL(object):
 
     # 選擇最長的斜直線
     x1, y1, x2, y2 = lines[0][0]
-    # cv2.line(result, (x1, y1), (x2, y2), (0, 0, 255), 2, cv2.LINE_AA)
+    # cv2.line(result, (x1, y1), (x2, y2), (0, 0, 255), 2, cv2.LINE_AA) # 繪製出偵測到的指針
 
     # 計算數值
     value, p1, p2 = self._pointer_value(x1, y1, x2, y2, mode)
