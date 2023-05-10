@@ -1,11 +1,10 @@
 # 錶盤辨識
 
-:::info
 :bulb: 目前指針盤定位採用的是固定的橢圓位置，非即時偵測
-:::
 
-#### [:cactus:點我到 github](https://github.com/charlieUWUuwu/DIAL-Detect.git)
+[:cactus:點我到 github](https://github.com/charlieUWUuwu/DIAL-Detect.git)
 
+ 
 ## 輸出
 由左到右的錶盤偵測數值，數值範圍:
 - 小錶盤 : [0, 11]
@@ -40,17 +39,11 @@ obj = DIAL(img)
 # img:錶盤影像；values:指針數值
 imgs, values = obj.get_pointer_value()
 ```
-回傳的 imgs 與 values 內容大致如下
-![](https://hackmd.io/_uploads/BkEUHUKV2.png =50%x)
-
-
 
 ---
 
 ### **即時影像辨識**
-:::success
 :bulb: 鏡頭即時拍攝的圖片以 10 的倍數命名，存於指定的資料夾中
-:::
 
 ```python=
 # Identify_img.py
