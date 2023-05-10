@@ -254,7 +254,7 @@ class DIAL(object):
       # print('mode:', mode)
       # print('clockwise_angle:', clockwise_angle)
       # print("順時針角度:", clockwise_angle)
-      if clockwise_angle < -2: # 表示偵測到指針的另一端，5為緩衝，正常要是0
+      if clockwise_angle < -5: # 表示偵測到指針的另一端，5為緩衝，正常要是0
         clockwise_angle += 180
         x2 = 100 - x2
         y2 = 100 - y2
