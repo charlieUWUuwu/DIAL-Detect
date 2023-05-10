@@ -1,4 +1,3 @@
-# 打包
 # DialReader.py
 
 import cv2, math
@@ -8,29 +7,28 @@ from scipy.linalg import sqrtm
 class DIAL(object):
   def __init__(self,img_full):
     self.img_full = img_full
-    # self.ellipses = [] 
 
   def __del__(self): # 釋放圖片占用記憶體
     del self.img_full
 
   def get_ellipses(self):
-    ellipses = [] # (錶盤排序為小大小大)
-    ellipses.append(((61.78, 103.16), (89.28, 124.89), 178.89))# 在imgs[0]
-    ellipses.append(((202.32, 106.90), (136.77, 171.20), 179.77))# 在imgs[0]
-    ellipses.append(((232.04, 159.34), (85.22, 103.44), 172.22)) # 在imgs[1]
-    ellipses.append(((103.28, 106.36), (148.21, 157.25), 168.87)) # 在imgs[1]
+    # (錶盤排序為小大小大)
+    ellipses = [((59.715301513671875, 101.79426574707031), (79.736328125, 102.50804138183594), 168.863037109375),  # 在imgs[0]
+                ((212.0397491455078, 102.50831604003906), (126.36136627197266, 141.54234313964844), 176.99102783203125),  # 在imgs[0]
+                ((193.982177734375, 133.10011291503906), (88.37353515625, 98.0330581665039), 161.79904174804688), # 在imgs[1]
+                ((90.61474609375, 91.00980377197266), (124.4732666015625, 130.12530517578125), 137.1392364501953)]  # 在imgs[1]
     return ellipses
 
   def get_preprocessed_img(self, img):
     # 裁切圖片
     imgs = []
-    imgs.append(cv2.resize(img[670:1025, 155:745], (300, 224), interpolation=cv2.INTER_AREA)) #y, x
-    imgs.append(cv2.resize(img[155:550, 1130:1685], (300, 224), interpolation=cv2.INTER_AREA))
+    imgs.append(cv2.resize(img[650:1025, 135:765], (300, 204), interpolation=cv2.INTER_AREA)) #y, x
+    imgs.append(cv2.resize(img[205:600, 1130:1685], (300, 204), interpolation=cv2.INTER_AREA))
     return imgs
 
   def _convert_params(self, a, b, angle):
     """
-    将椭圆的长短轴、旋转角度参数转换为 A,B,C
+    將橢圓的長短軸、旋轉角度參數轉換為 A,B,C
     A*x^2 + B*x*y + C*y^2 = 1
     (x,y) ((A,B/2) (x,y)^T =  1
           (B/2,C))
@@ -54,7 +52,6 @@ class DIAL(object):
     return transfer_matrics
 
   def _pixelInImage(self, pt, W, H):
-    # boolIn = pt[0]>=0 and pt[0]< W and pt[1]>=0 and pt[1] < H
     return pt[0]>=0 and pt[0]< W and pt[1]>=0 and pt[1] < H
  
   ## 像素插值函數
@@ -175,14 +172,14 @@ class DIAL(object):
     lightness = hsv_image[:,:,2].mean()
     return  lightness
 
+  # ref : https://ithelp.ithome.com.tw/articles/10240334
   def _reduce_highlights(self, img):
-    # https://ithelp.ithome.com.tw/articles/10240334
+    
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # 先轉成灰階處理
     ret, thresh = cv2.threshold(img_gray, 200, 255, 0)  # 利用 threshold 過濾出高光的部分，目前設定高於 200 即為高光
     contours, hierarchy  = cv2.findContours(thresh.copy(),cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     img_zero = np.zeros(img.shape, dtype=np.uint8) 
     
-    # print(len(contours))
     mask = None
     for contour in contours:
       x, y, w, h = cv2.boundingRect(contour) 
@@ -202,10 +199,6 @@ class DIAL(object):
   def aug(self, src):
     """圖像亮度增強"""
     if self._get_lightness(src)>130:
-      #print("圖片亮度足夠，不做增強")
-      # src = reduce_highlights(src) # 去除高光
-      # src = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)  # 先轉成灰階處理
-      # src = cv2.equalizeHist(src)
       return src
     # 先計算分位點，去掉像素值中少數異常值，這個分位點可以自己配置。
     # 比如1中直方圖的紅色在0到255上都有值，但是實際上像素值主要在0到20內。
@@ -216,103 +209,153 @@ class DIAL(object):
       src[src>=max_percentile_pixel] = max_percentile_pixel
       src[src<=min_percentile_pixel] = min_percentile_pixel
 
-    # 將分位值區間拉伸到0到255，這裏取了255*0.1與255*0.9是因爲可能會出現像素值溢出的情況，所以最好不要設置爲0到255。
+      # 將分位值區間拉伸到0到255，這裏取了255*0.1與255*0.9是因爲可能會出現像素值溢出的情況，所以最好不要設置爲0到255。
       out = np.zeros(src.shape, src.dtype)
       cv2.normalize(src, out, 255*0.1, 255*0.9,cv2.NORM_MINMAX)
-      # out = reduce_highlights(out)
-
-      # 對圖像進行直方圖均衡化
-      # out = cv2.cvtColor(out, cv2.COLOR_BGR2GRAY)  # 先轉成灰階處理
-      # out = cv2.equalizeHist(out)
       return out
 
-  # 彩色
   def _pointer_value(self, x1, y1, x2, y2, mode=0):
     # 根據角度算出數值
-    if abs(x1-46)+abs(y1-54) > abs(x2-46)+abs(y2-54): # 使x1, y1為中心點 (離中心點較近的點做為中心點)
-      # x1, y1, x2, y2 = x2, y2, x1, y1
-      x1, y1, x2, y2 = 46, 54, x1, y1
+    if (x1-50)**2+(y1-50)**2 > (x2-50)**2+(y2-50)**2: # 使x1, y1為中心點 (離中心點較近的點做為中心點)
+      x1, y1, x2, y2 = 50, 50, x1, y1
     else:
-      x1, y1 = 46, 54
+      x1, y1 = 50, 50
 
     vec_x, vec_y = x2 - x1, y2 - y1
     clockwise_angle = math.degrees(math.atan2(vec_y, vec_x)) #[-180, 180]
     # print('初始數值:', clockwise_angle)
 
     # 順時針旋轉為正，且以錶盤數值起始點作為0度
-    if clockwise_angle < 0: # 表示在上半圓，將九點鐘方向轉為180度、三點鐘轉為360度
+    if clockwise_angle < 0: # 表示在上半圓，將三點鐘方向轉為0度、九點鐘轉為180度
       clockwise_angle += 360
-    clockwise_angle -= 90+45 # 從六點鐘多一些作為角度起始點
 
-    # 0~11 不知啥單位  mode==1
-    if mode==0:
+    if mode==0: # 0~11 不知啥單位  mode==1
+        clockwise_angle -= 90+48
+        # print("角度:", clockwise_angle)
+        # print('mode:', mode)
+        # print('clockwise_angle:', clockwise_angle)
+        # print("順時針角度:", clockwise_angle)
+        if clockwise_angle < -5.5: # 表示偵測到指針的另一端
+          clockwise_angle += 180
+          x2 = 100 - x2
+          y2 = 100 - y2
+        elif clockwise_angle > 267:
+          clockwise_angle -= 180
+          x2 = 100 - x2
+          y2 = 100 - y2
+        result = 0 + 11*(clockwise_angle/264)
+        if result < 0: 
+          result = 0
+        elif result > 11: 
+          result=11
+    else: # -5~55  mode==2(other)
+      clockwise_angle -= 90+50
+      # print("角度:", clockwise_angle)
       # print('mode:', mode)
       # print('clockwise_angle:', clockwise_angle)
-      result = 0 + 11*(clockwise_angle/270)
-      if result < 0: result = 0
-      elif result > 11: result=11
-    
-    # -5~55  mode==2(other)
-    else:
-      # print('mode:', mode)
-      # print('clockwise_angle:', clockwise_angle)
-      result = -5 + 60*(clockwise_angle/270)
-      if result < -5: result = -5
-      elif result > 55: result=55
+      # print("順時針角度:", clockwise_angle)
+      if clockwise_angle < -2: # 表示偵測到指針的另一端，5為緩衝，正常要是0
+        clockwise_angle += 180
+        x2 = 100 - x2
+        y2 = 100 - y2
+      elif clockwise_angle >= 263: 
+        clockwise_angle -= 180
+        x2 = 100 - x2
+        y2 = 100 - y2
+      result = -5 + 60*(clockwise_angle/260)
+      if result < -5: 
+        result = -5
+      elif result > 55: 
+        result=55
+
     return result, (x1, y1), (x2, y2)
 
-
   def _detect_pointer(self, cir, mode):
-    cir = self.aug(cir) #此處cir須為RGB格式
-    result = cir.copy()
+    cir_copy = cir.copy()
+    cir_copy = self.aug(cir_copy) #此處cir須為RGB格式
+    cir_copy = cv2.medianBlur(cir_copy, 3)   # 模糊化，去除雜訊
 
-    img = cv2.GaussianBlur(cir, (3, 3), 0)
-    # edges = cv2.Canny(img, 45, 140, apertureSize=3) 80 100 3
-    edges = cv2.Canny(img, 45, 150, apertureSize=3)
+    # 指針偵測
+    lightness = self._get_lightness(cir_copy)
+    # print("detect_pointer 亮度:", lightness)
+    lines, edges = None, None
+
+    if mode == 0: # 小錶盤
+      if lightness < 130: # 偏暗(早上居多)
+        edges = cv2.Canny(cir_copy, 15, 100, apertureSize=3) # 邊緣檢測 
+        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 40) #39
+      else:
+        edges = cv2.Canny(cir_copy, 45, 130, apertureSize=3)
+        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 32) #39
+    else: # 大錶盤
+      if lightness < 130: # 偏暗(早上居多)
+        edges = cv2.Canny(cir_copy, 15, 130, apertureSize=3)
+        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 35) #39
+      else: # 偏亮(晚上居多)
+        edges = cv2.Canny(cir_copy, 45, 70, apertureSize=3) # 邊緣檢測 
+        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 36) #39
     # print('edges')
     # cv2_imshow(edges)
 
-    # lines = cv2.HoughLines(edges, 1, np.pi / 180, 45)  
-    lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 42)
+    # 若未偵測到直線
+    if lines is None:
+      return cir_copy, -100
 
     # 排序
-    lines = sorted(lines, key=lambda x: np.sqrt((x[0][2]-x[0][0])**2 + (x[0][3]-x[0][1])**2), reverse=True)
+    lines = sorted(lines, key=lambda x: (x[0][2]-x[0][0])**2 + (x[0][3]-x[0][1])**2, reverse=True)
 
     # 選擇最長的斜直線
-    x1, y1, x2, y2 = lines[0][0]
-    # cv2.line(result, (x1, y1), (x2, y2), (0, 0, 255), 2, cv2.LINE_AA) # 繪製出偵測到的指針
+    longest_line = lines[0]
+
+    x1, y1, x2, y2 = longest_line[0]
+    # cv2.line(result, (x1, y1), (x2, y2), (0, 0, 255), 2, cv2.LINE_AA)
+
+    # print(len(lines)) # 輸出偵測到的線條總數量
+    # for line in lines: 
+    #   x1, y1, x2, y2 = line[0] 
+    #   cv2.line(cir_copy, (x1, y1), (x2, y2), (0, 0, 255), 2, cv2.LINE_AA)
 
     # 計算數值
     value, p1, p2 = self._pointer_value(x1, y1, x2, y2, mode)
-    cv2.line(result, p1, p2, (0, 0, 255), 2, cv2.LINE_AA) # BGR
-    # cv2.line(result, p1, p2, (255), 2, cv2.LINE_AA) # gray
-
-    return result, round(value, 2)
+    cv2.line(cir_copy, p1, p2, (0, 0, 255), 2, cv2.LINE_AA) # BGR
+    value = round(value, 2)
+    return cir_copy, value
 
 
   def get_pointer_value(self):
     obj = DIAL(self.img_full)
-    # cv2.imshow('img_full', obj.img_full)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
     imgs = obj.get_preprocessed_img(obj.img_full) # 一個鏡頭拍的畫面切為兩部分
-    # cv2.imshow('imgs', imgs[0])
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
     ellipses = obj.get_ellipses() # 橢圓形已寫死
     transfer_matrics = obj.get_transfer_matrics(ellipses)
     outs = obj.get_circles(imgs, ellipses, transfer_matrics) # 獲得圓形表盤
-    # cv2.imshow('outs', outs[0])
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+
     results = [] # 圖片
     values = [] # 數值
 
     count = 0
     for out in outs:
-      result, value = obj._detect_pointer(out, count%2)
-      values.append(value)
-      results.append(result)
-      count += 1
+      out_copy = out.copy()
+      lightness = self._get_lightness(out_copy)
+      # print("亮度:", lightness)
 
+      if count % 2 == 0:
+        result, value = self._detect_pointer(out_copy, count%2)
+        # print('偵測數值:', value)
+        # print('result')
+        # cv2_imshow(result)
+        # print(' ')
+        values.append(value)
+        results.append(result)
+      else: # 大表盤
+        # 額外影像處理 https://steam.oxxostudio.tw/category/python/ai/opencv-adjust.html   
+        contrast, brightness = 50, 0 
+        if lightness > 140: # 早上因沒有燈光對著照，所以反而較暗
+          contrast, brightness = 100, -50
+        out_copy = out_copy * (contrast/127 + 1) - contrast + brightness # 轉換公式
+        out_copy = np.clip(out_copy, 0, 255)
+        out_copy = np.uint8(out_copy)
+        result, value = self._detect_pointer(out_copy, count%2)
+        values.append(value)
+        results.append(result)
+      count += 1
     return results, values
