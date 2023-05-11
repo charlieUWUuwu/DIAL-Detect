@@ -29,7 +29,7 @@ if __name__=='__main__':
     interval = 10
 
     # 定義保存圖像的文件夾路徑
-    save_path = '../cold img output/noon/'
+    save_path = './image/'
 
     count = 0
     timeStart = int(time.time())
