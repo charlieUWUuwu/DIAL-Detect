@@ -5,7 +5,7 @@
 [:cactus:點我到 github](https://github.com/charlieUWUuwu/DIAL-Detect.git)
 
  
-## 輸出
+## 數值輸出
 由左到右的錶盤偵測數值，數值範圍:
 - 小錶盤 : [0, 11]
 - 大錶盤 : [-5, 55]
