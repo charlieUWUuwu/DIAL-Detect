@@ -2,6 +2,8 @@
 
 :bulb: 目前指針盤定位採用的是固定的橢圓位置，非即時偵測
 
+😓 目前中間兩個大指針盤偵測還不是很穩定
+
 [:cactus:點我到 github](https://github.com/charlieUWUuwu/DIAL-Detect.git)
 
  
