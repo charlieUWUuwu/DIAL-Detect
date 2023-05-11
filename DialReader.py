@@ -272,7 +272,7 @@ class DIAL(object):
 
   def _detect_pointer(self, cir, mode):
     cir_copy = cir.copy()
-    cir_copy = self.aug(cir_copy) #此處cir須為RGB格式
+    cir_copy = self.aug(cir_copy) #此處cir_copy須為RGB格式
     cir_copy = cv2.medianBlur(cir_copy, 3)   # 模糊化，去除雜訊
 
     # 指針偵測
@@ -281,19 +281,19 @@ class DIAL(object):
     lines, edges = None, None
 
     if mode == 0: # 小錶盤
-      if lightness < 130: # 偏暗(早上居多)
+      if lightness < 130: 
         edges = cv2.Canny(cir_copy, 15, 100, apertureSize=3) # 邊緣檢測 
-        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 40) #39
+        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 40) 
       else:
         edges = cv2.Canny(cir_copy, 45, 130, apertureSize=3)
-        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 32) #39
-    else: # 大錶盤
-      if lightness < 130: # 偏暗(早上居多)
+        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 34) 
+    else: # 大錶盤較難辨識
+      if lightness < 130: 
         edges = cv2.Canny(cir_copy, 15, 130, apertureSize=3)
-        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 35) #39
-      else: # 偏亮(晚上居多)
-        edges = cv2.Canny(cir_copy, 45, 70, apertureSize=3) # 邊緣檢測 
-        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 36) #39
+        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 42) 
+      else: 
+        edges = cv2.Canny(cir_copy, 45, 130, apertureSize=3) # 邊緣檢測 
+        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 37) 
     # print('edges')
     # cv2_imshow(edges)
 
@@ -346,11 +346,15 @@ class DIAL(object):
         # print(' ')
         values.append(value)
         results.append(result)
-      else: # 大表盤
-        # 額外影像處理 https://steam.oxxostudio.tw/category/python/ai/opencv-adjust.html   
+      else: # 大錶盤
+        # 額外影像處理 https://steam.oxxostudio.tw/category/python/ai/opencv-adjust.html 
+        # 對比度調整
         contrast, brightness = 50, 0 
-        if lightness > 140: # 早上因沒有燈光對著照，所以反而較暗
+        if lightness > 140: # 早上沒有燈光對著照，可能反而較暗
           contrast, brightness = 100, -50
+        elif lightness < 70: 
+          contrast, brightness = 180, 100 
+          
         out_copy = out_copy * (contrast/127 + 1) - contrast + brightness # 轉換公式
         out_copy = np.clip(out_copy, 0, 255)
         out_copy = np.uint8(out_copy)
