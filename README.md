@@ -19,7 +19,7 @@
 3. `get_transfer_matrics(ellipses)` : 獲得每個橢圓以原點為中心的橢圓方程的係數 x'Ax = 1。
 4. `get_circles(imgs, ellipses, transfer_matrics)` : 回傳橢圓轉換成的圓形。
 5. `aug(src)` : 回傳調整亮度後的影像，若亮度超過 130 者才進行增強。
-6. `_detect_pointer(cir, mode)` : 霍夫直線檢測，找出指針位子座標。mode為0表示處理小錶盤，為2者則處理大錶盤。
+6. `_detect_pointer(cir, mode)` : 霍夫直線檢測，找出指針位子座標。mode為0表示處理小錶盤，為1者則處理大錶盤。
 7. `_pointer_value(x1, y1, x2, y2, mode)` : 根據傳入指針座標計算對應的錶盤數值，並回傳。
 
 ## 當前困難點
