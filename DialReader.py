@@ -144,7 +144,7 @@ class DIAL(object):
       A = transfer_matrics[i]
       A = np.array(A)
       EllipseCenter = ellipses[i][0]
-      R = 50 # 出來的圓盤半徑長
+      R = 100 # 出來的圓盤半徑長
       if i < 2:
         out = self._ellipse2circle(imgs[0], A, EllipseCenter, R)
       else:
@@ -216,10 +216,10 @@ class DIAL(object):
 
   def _pointer_value(self, x1, y1, x2, y2, mode=0):
     # 根據角度算出數值
-    if (x1-50)**2+(y1-50)**2 > (x2-50)**2+(y2-50)**2: # 使x1, y1為中心點 (離中心點較近的點做為中心點)
-      x1, y1, x2, y2 = 50, 50, x1, y1
+    if (x1-100)**2+(y1-100)**2 > (x2-100)**2+(y2-100)**2:# 使x1, y1為中心點 (離中心點較近的點做為中心點)
+      x1, y1, x2, y2 = 100, 100, x1, y1
     else:
-      x1, y1 = 50, 50
+      x1, y1 = 100, 100
 
     vec_x, vec_y = x2 - x1, y2 - y1
     clockwise_angle = math.degrees(math.atan2(vec_y, vec_x)) #[-180, 180]
@@ -235,14 +235,14 @@ class DIAL(object):
         # print('mode:', mode)
         # print('clockwise_angle:', clockwise_angle)
         # print("順時針角度:", clockwise_angle)
-        if clockwise_angle < -5.5: # 表示偵測到指針的另一端
+        if clockwise_angle < -5: # 表示偵測到指針的另一端
           clockwise_angle += 180
-          x2 = 100 - x2
-          y2 = 100 - y2
+          x2 = 200 - x2
+          y2 = 200 - y2
         elif clockwise_angle > 267:
           clockwise_angle -= 180
-          x2 = 100 - x2
-          y2 = 100 - y2
+          x2 = 200 - x2
+          y2 = 200 - y2
         result = 0 + 11*(clockwise_angle/264)
         if result < 0: 
           result = 0
@@ -256,12 +256,12 @@ class DIAL(object):
       # print("順時針角度:", clockwise_angle)
       if clockwise_angle < -5: # 表示偵測到指針的另一端，5為緩衝，正常要是0
         clockwise_angle += 180
-        x2 = 100 - x2
-        y2 = 100 - y2
+        x2 = 200 - x2
+        y2 = 200 - y2
       elif clockwise_angle >= 263: 
         clockwise_angle -= 180
-        x2 = 100 - x2
-        y2 = 100 - y2
+        x2 = 200 - x2
+        y2 = 200 - y2
       result = -5 + 60*(clockwise_angle/260)
       if result < -5: 
         result = -5
@@ -269,31 +269,46 @@ class DIAL(object):
         result=55
 
     return result, (x1, y1), (x2, y2)
+  
+    def _del_noise(self, cir):
+      cx = 100
+      cy = 100
+      r = 100
 
+      # 去除圓形的邊緣
+      circle = np.zeros(cir.shape, dtype="uint8")
+      cv2.circle(circle, (cx, cy), int(r-25), 255, -1)
+      mask = cv2.bitwise_and(cir, circle)
+      return mask
+  
   def _detect_pointer(self, cir, mode):
     cir_copy = cir.copy()
     cir_copy = self.aug(cir_copy) #此處cir_copy須為RGB格式
-    cir_copy = cv2.medianBlur(cir_copy, 3)   # 模糊化，去除雜訊
+    cir_copy = cv2.medianBlur(cir_copy, 7)   # 模糊化，去除雜訊
 
     # 指針偵測
     lightness = self._get_lightness(cir_copy)
     # print("detect_pointer 亮度:", lightness)
     lines, edges = None, None
 
-    if mode == 0: # 小錶盤
+    if mode == 0:
       if lightness < 130: 
-        edges = cv2.Canny(cir_copy, 15, 100, apertureSize=3) # 邊緣檢測 
-        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 40) 
+        edges = cv2.Canny(cir_copy, 15, 100, apertureSize=3) # 邊緣檢測 # 45, 150 #夜晚 : 105, 205, apertureSize=5  15 250
+        edges = self._del_noise(edges)
+        lines = cv2.HoughLinesP(edges, 7.0, np.pi/180, 43) #39
       else:
         edges = cv2.Canny(cir_copy, 45, 130, apertureSize=3)
-        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 34) 
+        edges = self._del_noise(edges)
+        lines = cv2.HoughLinesP(edges, 7.0, np.pi/180, 38) #39
     else: # 大錶盤較難辨識
       if lightness < 130: 
         edges = cv2.Canny(cir_copy, 15, 130, apertureSize=3)
-        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 42) 
+        edges = self._del_noise(edges)
+        lines = cv2.HoughLinesP(edges, 5.0, np.pi/180, 45) #39
       else: 
-        edges = cv2.Canny(cir_copy, 45, 130, apertureSize=3) # 邊緣檢測 
-        lines = cv2.HoughLinesP(edges, 1.0, np.pi/180, 37) 
+        edges = cv2.Canny(cir_copy, 45, 100, apertureSize=3) # 邊緣檢測 # 45, 150 #夜晚 : 105, 205, apertureSize=5  15 250
+        edges = self._del_noise(edges)
+        lines = cv2.HoughLinesP(edges, 5.0, np.pi/180, 40) #39
     # print('edges')
     # cv2_imshow(edges)
 
@@ -301,13 +316,31 @@ class DIAL(object):
     if lines is None:
       return cir_copy, -100
 
+    # 太短或太長線段移除
+    max_line_length = 80 # 最小的線段長度閾值
+    filtered_lines = []
+    for line in lines:
+      x1, y1, x2, y2 = line[0]
+
+      # 其中一端不能距離中心點太遠
+      if (x1-100)**2+(y1-100)**2 < (x2-100)**2+(y2-100)**2: # p1距中心較近
+        p1, p2 = (x1, y1), (x2, y2)
+      else:
+        p1, p2 = (x2, y2), (x1, y1)
+      
+      if np.sqrt((p1[0]-100)**2+(p1[1]-100)**2) <= 60:
+        line_length = np.sqrt((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2) 
+        # print('線段長 : ', line_length)
+        if line_length < max_line_length: # 太長的線剃除
+          filtered_lines.append(line)
+
     # 排序
-    lines = sorted(lines, key=lambda x: (x[0][2]-x[0][0])**2 + (x[0][3]-x[0][1])**2, reverse=True)
+    filtered_lines = sorted(filtered_lines, key=lambda x: (x[0][2]-x[0][0])**2 + (x[0][3]-x[0][1])**2, reverse=True)
 
     # 選擇最長的斜直線
-    longest_line = lines[0]
-
+    longest_line = filtered_lines[0]
     x1, y1, x2, y2 = longest_line[0]
+    
     # cv2.line(result, (x1, y1), (x2, y2), (0, 0, 255), 2, cv2.LINE_AA)
 
     # print(len(lines)) # 輸出偵測到的線條總數量
@@ -349,9 +382,9 @@ class DIAL(object):
       else: # 大錶盤
         # 額外影像處理 https://steam.oxxostudio.tw/category/python/ai/opencv-adjust.html 
         # 對比度調整
-        contrast, brightness = 50, 0 
+        contrast, brightness = 100, 0
         if lightness > 140: # 早上沒有燈光對著照，可能反而較暗
-          contrast, brightness = 100, -50
+          contrast, brightness = 100, -100
         elif lightness < 70: 
           contrast, brightness = 180, 100 
           
