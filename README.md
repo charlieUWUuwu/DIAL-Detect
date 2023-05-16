@@ -45,6 +45,8 @@ imgs, values = obj.get_pointer_value()
 ---
 
 ### **即時影像辨識**
+🥺 請以`.py`檔案執行，不要使用`.ipynb`，否則daemon設定會有問題
+
 :bulb: 鏡頭即時拍攝的圖片以 10 的倍數命名，存於指定的資料夾中
 
 ```python
