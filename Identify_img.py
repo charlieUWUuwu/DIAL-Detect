@@ -4,6 +4,8 @@ from DialReader import DIAL
 import time
 import threading
 
+lock = threading.Lock() 
+
 def process_image(name, sec_count):
     img = cv2.imread('./FOLDER_PATH/' + name)
 
