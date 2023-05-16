@@ -4,7 +4,9 @@ from DialReader import DIAL
 import time
 import threading
 
-def process_image(img, sec_count):
+def process_image(name, sec_count):
+    img = cv2.imread('./FOLDER_PATH/' + name)
+
     obj = DIAL(img)
     imgs, values = obj.get_pointer_value()
 
@@ -16,7 +18,7 @@ def process_image(img, sec_count):
     print(values[2])
 
 if __name__=='__main__':
-    rtsp_url = ""
+    rtsp_url = "rtsp://justin:jufan2534879@210.61.41.223:554/stream1"
 
     # 創建VideoCapture對象
     cap = cv2.VideoCapture(rtsp_url)
@@ -29,7 +31,7 @@ if __name__=='__main__':
     interval = 10
 
     # 定義保存圖像的文件夾路徑
-    save_path = './image/'
+    save_path = '../cold img output/'
 
     count = 0
     timeStart = int(time.time())
@@ -42,20 +44,20 @@ if __name__=='__main__':
             print('sec:', sec_count , ' success')
             # 每interval秒捕獲一張圖像
             if sec_count % interval == 0:
-                # 同時處理圖片
-                # f_copy = frame.copy()
-                threading.Thread(target=process_image, args=(frame, sec_count,), daemon=True).start()  # 設定為daemon thread
-                # t.start()  #啟動
             
                 # 生成文件名
                 filename = time.strftime("image") + str(sec_count) + ".jpg" 
-                # filename = "image" + str(sec_count) + ".jpg" 
 
                 # 拼接文件路徑
                 file_path = save_path + "/" + filename
 
                 # 保存圖像
+                lock.acquire()
                 cv2.imwrite(file_path, frame)
+                lock.release()
+
+                # 同時處理圖片
+                threading.Thread(target=process_image, args=(filename, sec_count,), daemon=True).start()  # 設定為daemon thread
                 count += 1
         else:
             # 若讀取失敗，則重新連接
