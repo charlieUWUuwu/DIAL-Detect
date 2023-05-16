@@ -270,16 +270,16 @@ class DIAL(object):
 
     return result, (x1, y1), (x2, y2)
   
-    def _del_noise(self, cir):
-      cx = 100
-      cy = 100
-      r = 100
+  def _del_noise(self, cir):
+    cx = 100
+    cy = 100
+    r = 100
 
-      # 去除圓形的邊緣
-      circle = np.zeros(cir.shape, dtype="uint8")
-      cv2.circle(circle, (cx, cy), int(r-25), 255, -1)
-      mask = cv2.bitwise_and(cir, circle)
-      return mask
+    # 去除圓形的邊緣
+    circle = np.zeros(cir.shape, dtype="uint8")
+    cv2.circle(circle, (cx, cy), int(r-25), 255, -1)
+    mask = cv2.bitwise_and(cir, circle)
+    return mask
   
   def _detect_pointer(self, cir, mode):
     cir_copy = cir.copy()
