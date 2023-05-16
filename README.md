@@ -70,7 +70,7 @@ def process_image(name, sec_count):
     print(values[2])
 
 if __name__=='__main__':
-    rtsp_url = "rtsp://justin:jufan2534879@210.61.41.223:554/stream1"
+    rtsp_url = ""
 
     # 創建VideoCapture對象
     cap = cv2.VideoCapture(rtsp_url)
