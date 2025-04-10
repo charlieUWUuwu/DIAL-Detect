@@ -4,7 +4,7 @@
 
 😓 目前中間兩個大指針盤偵測還不是很穩定
 
-[:cactus:點我到 github](https://github.com/charlieUWUuwu/DIAL-Detect.git)
+[:cactus:點我到 hackmd](https://hackmd.io/@JCKA/Hk457TuNh)
 
  
 ## 數值輸出
